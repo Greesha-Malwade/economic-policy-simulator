@@ -103,15 +103,24 @@ def plot_actual_vs_predicted(y_actual_inf, y_pred_inf,
 # ── Evaluation Helper ─────────────────────────────────────────────────────────
 
 def evaluate_model(model_name, y_test, y_pred):
-    """Calculates and prints MSE, RMSE, and R2 Score for a model."""
+    """Calculates MSE, RMSE, and R2 Score; prints and logs results."""
     mse  = mean_squared_error(y_test, y_pred)
     rmse = np.sqrt(mse)
     r2   = r2_score(y_test, y_pred)
 
-    print(f"\n  {model_name} Model Evaluation:")
-    print(f"    MSE:      {mse:.4f}")
-    print(f"    RMSE:     {rmse:.4f}")
-    print(f"    R2 Score: {r2:.4f}")
+    # ── Console output ───────────────────────────────────────
+    print(f"\n---- {model_name} Model Evaluation ----")
+    print(f"MSE:      {mse:.4f}")
+    print(f"RMSE:     {rmse:.4f}")
+    print(f"R2 Score: {r2:.4f}")
+
+    # ── Append metrics block to experiment_log.txt ───────────
+    with open("experiment_log.txt", "a") as f:
+        f.write(f"\n[{model_name}]\n")
+        f.write(f"MSE: {mse:.4f}\n")
+        f.write(f"RMSE: {rmse:.4f}\n")
+        f.write(f"R2: {r2:.4f}\n")
+        f.write("--------\n")
 
     return r2, mean_absolute_error(y_test, y_pred)
 
