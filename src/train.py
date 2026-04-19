@@ -4,7 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_absolute_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+from sklearn.model_selection import train_test_split
 import joblib
 
 
@@ -99,6 +100,22 @@ def plot_actual_vs_predicted(y_actual_inf, y_pred_inf,
     plt.show()
 
 
+# ── Evaluation Helper ─────────────────────────────────────────────────────────
+
+def evaluate_model(model_name, y_test, y_pred):
+    """Calculates and prints MSE, RMSE, and R2 Score for a model."""
+    mse  = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    r2   = r2_score(y_test, y_pred)
+
+    print(f"\n  {model_name} Model Evaluation:")
+    print(f"    MSE:      {mse:.4f}")
+    print(f"    RMSE:     {rmse:.4f}")
+    print(f"    R2 Score: {r2:.4f}")
+
+    return r2, mean_absolute_error(y_test, y_pred)
+
+
 # ── Training Pipeline ────────────────────────────────────────────────────────
 
 def train_and_save_models():
@@ -117,30 +134,47 @@ def train_and_save_models():
 
     X = df[['interest_rate', 'gov_spending', 'tax_rate']]
 
-    # ── Model 1: Inflation ───────────────────────────────────
-    y_inflation     = df['inflation']
-    model_inflation = LinearRegression()
-    model_inflation.fit(X, y_inflation)
-    pred_inflation  = model_inflation.predict(X)
+    # ── Train / Test Split ───────────────────────────────────
+    print("\nSplitting data into train (80%) and test (20%) sets...")
+    X_train, X_test = train_test_split(X, test_size=0.2, random_state=42)
 
-    inflation_r2  = round(r2_score(y_inflation, pred_inflation), 2)
-    inflation_mae = round(mean_absolute_error(y_inflation, pred_inflation), 2)
+    y_inflation    = df['inflation']
+    y_unemployment = df['unemployment']
+
+    y_inf_train, y_inf_test     = train_test_split(y_inflation,    test_size=0.2, random_state=42)
+    y_unemp_train, y_unemp_test = train_test_split(y_unemployment, test_size=0.2, random_state=42)
+
+    # ── Model 1: Inflation ───────────────────────────────────
+    model_inflation = LinearRegression()
+    model_inflation.fit(X_train, y_inf_train)
+
+    # Predictions on test set for evaluation
+    pred_inf_test  = model_inflation.predict(X_test)
+    # Predictions on full set for visualization
+    pred_inflation = model_inflation.predict(X)
 
     # ── Model 2: Unemployment ────────────────────────────────
-    y_unemployment     = df['unemployment']
     model_unemployment = LinearRegression()
-    model_unemployment.fit(X, y_unemployment)
-    pred_unemployment  = model_unemployment.predict(X)
+    model_unemployment.fit(X_train, y_unemp_train)
 
-    unemployment_r2  = round(r2_score(y_unemployment, pred_unemployment), 2)
-    unemployment_mae = round(mean_absolute_error(y_unemployment, pred_unemployment), 2)
+    # Predictions on test set for evaluation
+    pred_unemp_test   = model_unemployment.predict(X_test)
+    # Predictions on full set for visualization
+    pred_unemployment = model_unemployment.predict(X)
 
-    # ── Print evaluation metrics ─────────────────────────────
-    print("\n[Evaluation Metrics]")
-    print(f"  {'Model':<22} {'R2 Score':>10} {'MAE':>10}")
-    print(f"  {'-'*44}")
-    print(f"  {'Inflation':<22} {inflation_r2:>10.2f} {inflation_mae:>10.2f}")
-    print(f"  {'Unemployment':<22} {unemployment_r2:>10.2f} {unemployment_mae:>10.2f}")
+    # ── Print evaluation metrics (MSE, RMSE, R2) ─────────────
+    print(f"\n{'='*55}")
+    print("  Model Evaluation (on held-out test set):")
+    print(f"{'='*55}")
+
+    inflation_r2, inflation_mae = evaluate_model(
+        "Inflation", y_inf_test, pred_inf_test
+    )
+    unemployment_r2, unemployment_mae = evaluate_model(
+        "Unemployment", y_unemp_test, pred_unemp_test
+    )
+
+    print(f"\n{'='*55}")
 
     # ── Save models ──────────────────────────────────────────
     os.makedirs('models', exist_ok=True)
